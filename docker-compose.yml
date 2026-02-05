@@ -1,0 +1,23 @@
+# Docker Compose for TeeTotalledBot on Phala Cloud.
+# Uses Phala's Confidential AI API (RedPill) for LLM inference.
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "5"
+
+services:
+  bot:
+    image: sangaline/tee-totalled:latest
+    restart: always
+    logging: *default-logging
+    environment:
+      # Secrets injected via Phala Cloud Encrypted Secrets.
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - REDPILL_API_KEY=${REDPILL_API_KEY}
+      # Production mode enables privacy protections.
+      - TEE_ENV=production
+    volumes:
+      # Mount dstack socket for TEE attestation.
+      - /var/run/dstack.sock:/var/run/dstack.sock

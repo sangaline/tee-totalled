@@ -1,0 +1,42 @@
+[project]
+name = "tee-totalled"
+version = "0.1.0"
+description = "A TEE trust game Telegram bot for dstack"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-telegram-bot>=22.0",
+    "openai>=1.0",
+    "seaborn>=0.13",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "httpx>=0.27",
+    "eth-account>=0.11",
+    "requests>=2.32.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1",
+    "pytest>=8.0",
+    "watchfiles>=1.0",
+]
+production = [
+    "dstack-sdk>=0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tee_totalled"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
