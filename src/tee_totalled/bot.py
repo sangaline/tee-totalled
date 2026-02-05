@@ -13,11 +13,12 @@ from telegram.ext import (
     filters,
 )
 
-from .attestation import get_attestation_message
+from .attestation import AttestationClient, get_attestation_message
 from .config import get_settings
 from .game import Game, get_game_manager
 from .histogram import format_stats_message, generate_histogram
 from .llm import get_llm_client
+from .verification import get_verifier
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,8 @@ class TeeTotalledBot:
                 "I'll score it from 1-100 based on offensiveness.\n\n"
                 "This is a test of how much you trust TEE privacy guarantees. "
                 "Your messages are NEVER revealed - only aggregate statistics are shared.\n\n"
+                "Use /verify to independently verify the TEE attestation "
+                "(you can include your own nonce, e.g. `/verify my secret nonce`).\n\n"
                 + get_attestation_message(),
                 parse_mode=ParseMode.MARKDOWN,
             )
@@ -168,6 +171,89 @@ class TeeTotalledBot:
             return
 
         await self._end_game(context, game.game_id, "stopped by creator")
+
+    async def verify_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /verify command to perform fresh TEE attestation with an optional user nonce."""
+        if not update.effective_chat or not update.message:
+            return
+
+        # User-supplied nonce is everything after the command.
+        user_nonce = " ".join(context.args) if context.args else None
+        nonce_display = f"`{user_nonce}`" if user_nonce else "_(auto-generated)_"
+
+        await update.message.reply_text(
+            f"Verifying TEE attestation with nonce: {nonce_display}\n"
+            "This may take a few seconds...",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+        # Fresh RedPill attestation with the user's nonce.
+        verifier = get_verifier()
+        result = await verifier.verify_attestation(nonce=user_nonce)
+
+        # Fresh dstack attestation.
+        dstack = AttestationClient()
+        dstack_info = dstack.get_info() if dstack.is_available() else None
+
+        # Build the response.
+        lines = ["*TEE Verification Report*\n"]
+        if user_nonce:
+            lines.append(f"Your nonce: `{user_nonce}`")
+            lines.append(f"Hex nonce (SHA-256): `{result.nonce}`")
+        else:
+            lines.append(f"Nonce: `{result.nonce}`")
+        lines.append("")
+
+        # RedPill LLM section.
+        lines.append("*LLM Inference (RedPill Confidential AI):*")
+        if result.valid:
+            lines.append("Intel TDX: VERIFIED")
+            lines.append(f"NVIDIA GPU: {'VERIFIED' if result.gpu_verified else 'not checked'}")
+            lines.append(f"Signing Address: `{result.signing_address}`")
+            lines.append(f"Model: `{verifier.model}`")
+            lines.append("")
+            lines.append(
+                "This proves the LLM runs on genuine Intel TDX hardware "
+                "and each response is signed by the TEE's private key."
+            )
+        else:
+            lines.append(f"Verification failed: {result.error}")
+
+        lines.append("")
+
+        # dstack bot section.
+        lines.append("*Bot Infrastructure (dstack):*")
+        if dstack_info and dstack_info.get("status") != "development_mode":
+            lines.append(f"App ID: `{dstack_info.get('app_id', 'unknown')}`")
+            lines.append("Verify: https://proof.t16z.com/")
+            lines.append("")
+            lines.append(
+                "This proves the bot code itself runs in a TEE and matches "
+                "the open-source build."
+            )
+        else:
+            lines.append(
+                "Bot is running in development mode (no dstack TEE). "
+                "In production, the bot code runs inside a TEE and you "
+                "can verify the image hash matches the open-source build."
+            )
+
+        lines.append("")
+
+        # How to verify independently.
+        lines.append("*Independent Verification:*")
+        lines.append(
+            "You can verify the LLM attestation yourself by calling "
+            "the RedPill API with your own nonce:"
+        )
+        lines.append(f"`GET {verifier.base_url}/attestation/report"
+                     f"?model={verifier.model}&nonce=YOUR_NONCE`")
+        lines.append("")
+        lines.append(f"Source: https://github.com/sangaline/tee-totalled/")
+
+        await update.message.reply_text(
+            "\n".join(lines), parse_mode=ParseMode.MARKDOWN,
+        )
 
     async def handle_private_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -404,6 +490,7 @@ def create_application() -> Application:
 
     application.add_handler(CommandHandler("start", bot.start_command))
     application.add_handler(CommandHandler("stop", bot.stop_command))
+    application.add_handler(CommandHandler("verify", bot.verify_command))
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_private_message)
     )

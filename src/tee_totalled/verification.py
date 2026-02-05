@@ -42,6 +42,7 @@ class AttestationResult:
     signing_address: str | None = None
     intel_verified: bool = False
     gpu_verified: bool = False
+    nonce: str | None = None
     error: str | None = None
 
 
@@ -66,13 +67,19 @@ class RedPillVerifier:
         self._known_addresses: set[str] = set()
         self._log_sensitive = settings.is_development
 
-    async def verify_attestation(self) -> AttestationResult:
+    async def verify_attestation(self, nonce: str | None = None) -> AttestationResult:
         """Verify the RedPill TEE attestation.
 
         This proves the infrastructure is genuine TEE hardware and pre-caches
-        the signing address for faster per-response verification.
+        the signing address for faster per-response verification. If a nonce
+        is provided it is SHA-256 hashed to produce a valid hex nonce for the
+        API; otherwise a random nonce is generated.
         """
-        nonce = secrets.token_hex(32)
+        if nonce:
+            # Hash user-provided nonce to produce a valid hex string for the API.
+            nonce = hashlib.sha256(nonce.encode()).hexdigest()
+        else:
+            nonce = secrets.token_hex(32)
 
         try:
             async with httpx.AsyncClient(timeout=VERIFICATION_TIMEOUT) as client:
@@ -113,20 +120,21 @@ class RedPillVerifier:
                     signing_address=signing_address,
                     intel_verified=intel_verified,
                     gpu_verified=gpu_verified,
+                    nonce=nonce,
                 )
 
         except httpx.HTTPStatusError as e:
             error = f"Attestation request failed: {e.response.status_code}"
             logger.warning(error)
-            return AttestationResult(valid=False, error=error)
+            return AttestationResult(valid=False, nonce=nonce, error=error)
         except httpx.TimeoutException:
             error = "Attestation request timed out"
             logger.warning(error)
-            return AttestationResult(valid=False, error=error)
+            return AttestationResult(valid=False, nonce=nonce, error=error)
         except Exception as e:
             error = f"Attestation verification failed: {e}"
             logger.warning(error)
-            return AttestationResult(valid=False, error=error)
+            return AttestationResult(valid=False, nonce=nonce, error=error)
 
     async def _verify_tdx_quote(
         self, client: httpx.AsyncClient, intel_quote: str | None

@@ -144,6 +144,7 @@ def get_attestation_message() -> str:
         "🔐 *TEE Attestation Status*\n\n"
         f"*LLM (RedPill Confidential AI):*\n{llm_section}\n\n"
         f"*Bot Infrastructure:*\n{bot_section}\n\n"
+        "Use /verify to perform a fresh attestation check with your own nonce.\n\n"
         f"Source: https://github.com/sangaline/tee-totalled/"
     )
 
