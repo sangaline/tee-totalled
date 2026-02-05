@@ -132,7 +132,7 @@ def get_attestation_message() -> str:
             bot_section = (
                 f"Bot is running in dstack TEE.\n"
                 f"App ID: `{app_id}`\n"
-                f"Verify: https://proof.t16z.com/"
+                f"Verify: https://trust.phala.com/app/{app_id}"
             )
         except Exception as e:
             logger.error(f"Error getting dstack attestation info: {e}")

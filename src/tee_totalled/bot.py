@@ -224,8 +224,9 @@ class TeeTotalledBot:
         # dstack bot section.
         lines.append("*Bot Infrastructure (dstack):*")
         if dstack_info and dstack_info.get("status") != "development_mode":
-            lines.append(f"App ID: `{dstack_info.get('app_id', 'unknown')}`")
-            lines.append("Verify: https://proof.t16z.com/")
+            app_id = dstack_info.get('app_id', 'unknown')
+            lines.append(f"App ID: `{app_id}`")
+            lines.append(f"Verify: https://trust.phala.com/app/{app_id}")
             lines.append("")
             lines.append(
                 "This proves the bot code itself runs in a TEE and matches "

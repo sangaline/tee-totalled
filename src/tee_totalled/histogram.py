@@ -35,27 +35,17 @@ def generate_histogram(scores: list[int]) -> tuple[bytes, dict[str, float]]:
     sns.set_theme(style="darkgrid", palette="deep")
     fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
 
-    # Create histogram with KDE overlay if we have enough data points.
-    if len(scores) >= 3:
-        sns.histplot(
-            scores,
-            bins=min(20, len(set(scores))),
-            kde=True,
-            color="#5DA5DA",
-            edgecolor="white",
-            linewidth=0.5,
-            ax=ax,
-        )
-    else:
-        sns.histplot(
-            scores,
-            bins=min(10, len(set(scores))),
-            kde=False,
-            color="#5DA5DA",
-            edgecolor="white",
-            linewidth=0.5,
-            ax=ax,
-        )
+    # Fixed bins: 1-10, 11-20, ..., 91-100.
+    bin_edges = np.arange(0.5, 101.5, 10)
+    sns.histplot(
+        scores,
+        bins=bin_edges,
+        kde=len(scores) >= 3,
+        color="#5DA5DA",
+        edgecolor="white",
+        linewidth=0.5,
+        ax=ax,
+    )
 
     # Add vertical lines for mean and median.
     ax.axvline(
@@ -83,8 +73,10 @@ def generate_histogram(scores: list[int]) -> tuple[bytes, dict[str, float]]:
         pad=20,
     )
 
-    # Set x-axis limits to 0-100.
-    ax.set_xlim(0, 100)
+    # Fixed 0-100 range with labeled bin centers.
+    ax.set_xlim(0, 101)
+    ax.set_xticks(np.arange(5.5, 100, 10))
+    ax.set_xticklabels([f"{i}-{i+9}" for i in range(1, 100, 10)], fontsize=9)
 
     # Add legend with statistics.
     legend_text = (
