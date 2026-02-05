@@ -175,48 +175,6 @@ Do not include any other text or explanation."""
             logger.error(f"Error scoring message: {e}")
             return 50
 
-    async def generate_moral_reaction(self, messages: list[str]) -> str:
-        """Generate a moral reaction to a collection of messages without revealing specifics."""
-        system_prompt = """You are providing a thoughtful moral reflection on messages submitted
-to a trust game. Users submitted messages trying to be offensive to test their trust in TEE
-privacy guarantees.
-
-IMPORTANT: You must NOT reveal any specific content, quotes, or details from the messages.
-Instead, provide a general moral reflection on:
-- The themes or categories of content people felt comfortable sharing
-- What this says about trust levels in privacy technology
-- A philosophical observation about human nature and privacy
-
-Keep your response concise (2-3 paragraphs) and thought-provoking.
-Never quote or paraphrase any specific message."""
-
-        # Create a summary prompt without exposing raw content in logs.
-        user_prompt = f"""Reflect morally on {len(messages)} messages submitted to a trust game.
-The messages ranged from mild to potentially very offensive content.
-Provide your reflection without revealing any specific message content."""
-
-        # In development, we can include the actual messages for better responses.
-        settings = get_settings()
-        if settings.is_development:
-            user_prompt = f"""Here are {len(messages)} messages submitted to a trust game.
-Provide a moral reflection without revealing specific content:
-
-{chr(10).join(f'- Message {i+1}' for i in range(len(messages)))}
-
-(The actual messages are provided for context but must not be quoted or paraphrased.)
-
-Actual messages for your analysis only:
-{json.dumps(messages)}"""
-
-        try:
-            return await self._complete(system_prompt, user_prompt)
-        except VerificationError:
-            raise  # Re-raise verification errors.
-        except Exception as e:
-            logger.error(f"Error generating moral reaction: {e}")
-            return "The submissions revealed interesting patterns about trust and privacy."
-
-
 # Singleton instance.
 _client: LLMClient | None = None
 

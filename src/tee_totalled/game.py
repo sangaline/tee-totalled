@@ -51,10 +51,6 @@ class Game:
         """Get all submission scores."""
         return [s.score for s in self.submissions.values()]
 
-    def get_messages(self) -> list[str]:
-        """Get all submission messages."""
-        return [s.message for s in self.submissions.values()]
-
     def get_participant_ids(self) -> list[int]:
         """Get all participant user IDs."""
         return list(self.submissions.keys())

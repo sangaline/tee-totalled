@@ -428,16 +428,10 @@ class TeeTotalledBot:
         except Exception as e:
             logger.error(f"Failed to generate histogram: {e}")
 
-        reaction = None
-        try:
-            reaction = await self.llm_client.generate_moral_reaction(game.get_messages())
-        except Exception as e:
-            logger.error(f"Failed to generate moral reaction: {e}")
-
         attestation_msg = get_attestation_message()
 
         # Send results to the game's origin chat.
-        await self._send_results(context, game.chat_id, image_bytes, stats, reaction, attestation_msg)
+        await self._send_results(context, game.chat_id, image_bytes, stats, attestation_msg)
 
         # DM results to each participant individually.
         for user_id in game.get_participant_ids():
@@ -446,7 +440,7 @@ class TeeTotalledBot:
                 continue
             try:
                 await self._send_results(
-                    context, user_id, image_bytes, stats, reaction, attestation_msg
+                    context, user_id, image_bytes, stats, attestation_msg
                 )
             except Exception as e:
                 logger.warning(f"Failed to DM results to user {user_id}: {e}")
@@ -457,10 +451,9 @@ class TeeTotalledBot:
         chat_id: int,
         image_bytes: bytes | None,
         stats: dict[str, float] | None,
-        reaction: str | None,
         attestation_msg: str,
     ) -> None:
-        """Send game results (histogram, stats, reflection, attestation) to a chat."""
+        """Send game results (histogram, stats, attestation) to a chat."""
         if image_bytes and stats:
             await context.bot.send_photo(
                 chat_id=chat_id,
@@ -471,13 +464,6 @@ class TeeTotalledBot:
         else:
             await context.bot.send_message(
                 chat_id=chat_id, text="📊 Results processing encountered an error."
-            )
-
-        if reaction:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=f"🤔 *Moral Reflection*\n\n{reaction}",
-                parse_mode=ParseMode.MARKDOWN,
             )
 
         await context.bot.send_message(
