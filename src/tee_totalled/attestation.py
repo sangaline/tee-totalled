@@ -109,19 +109,19 @@ class AttestationClient:
 def get_trust_footer() -> str:
     """Get a concise trust footer with verification links for inline use in messages."""
     client = get_attestation_client()
-    links = [f"[Source]({GITHUB_URL})"]
+    lines = ["_Protected by TEE hardware._"]
 
     if client.is_available():
         try:
             info = client.get_info()
             app_id = info.get("app_id", "unknown")
-            links.insert(0, f"[Verify TEE](https://trust.phala.com/app/{app_id})")
+            lines.append(f"  - Verify: https://trust.phala.com/app/{app_id}")
         except Exception:
             pass
 
-    return (
-        f"_Protected by TEE hardware. {' | '.join(links)} | /verify_"
-    )
+    lines.append(f"  - Source: {GITHUB_URL}")
+    lines.append("  - /verify to check attestation")
+    return "\n".join(lines)
 
 
 def get_attestation_message() -> str:
