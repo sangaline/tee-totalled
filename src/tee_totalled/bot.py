@@ -13,7 +13,12 @@ from telegram.ext import (
     filters,
 )
 
-from .attestation import AttestationClient, get_attestation_message
+from .attestation import (
+    GITHUB_URL,
+    AttestationClient,
+    get_attestation_message,
+    get_trust_footer,
+)
 from .config import get_settings
 from .game import Game, get_game_manager
 from .histogram import format_stats_message, generate_histogram
@@ -250,7 +255,7 @@ class TeeTotalledBot:
         lines.append(f"`GET {verifier.base_url}/attestation/report"
                      f"?model={verifier.model}&nonce=YOUR_NONCE`")
         lines.append("")
-        lines.append(f"Source: https://github.com/sangaline/tee-totalled/")
+        lines.append(f"Source: {GITHUB_URL}")
 
         await update.message.reply_text(
             "\n".join(lines), parse_mode=ParseMode.MARKDOWN,
@@ -297,19 +302,20 @@ class TeeTotalledBot:
         score = await self.llm_client.score_offensiveness(message_text)
         improved = self.game_manager.add_submission(game_id, user_id, message_text, score)
 
+        trust_footer = get_trust_footer()
         if improved:
             response = (
                 f"Your message scored *{score}/100* on the offensiveness scale! 🎯\n\n"
                 f"This is your new best score. Can you be even more offensive?\n\n"
-                "_Remember: your messages are private and protected by TEE._"
+                f"{trust_footer}"
             )
         else:
             best_score = self.game_manager.get_user_best_score(game_id, user_id) or score
             response = (
                 f"Your message scored *{score}/100*, but your best is still "
                 f"*{best_score}/100*.\n\n"
-                "Try to beat your high score! Be more creative (or offensive).\n\n"
-                "_Remember: your messages are private and protected by TEE._"
+                f"Try to beat your high score! Be more creative (or offensive).\n\n"
+                f"{trust_footer}"
             )
 
         await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
@@ -325,6 +331,7 @@ class TeeTotalledBot:
         minutes = remaining // 60
         seconds = remaining % 60
 
+        trust_footer = get_trust_footer()
         text = (
             f"🎲 *Trust Game Active!*\n\n"
             f"Click the link below to submit your most offensive message privately. "
@@ -332,6 +339,7 @@ class TeeTotalledBot:
             f"👉 [Join the game]({deep_link})\n\n"
             f"⏱️ Time remaining: {minutes}:{seconds:02d}\n"
             f"👥 Participants: {game.participant_count}\n\n"
+            f"{trust_footer}\n"
             f"_Use /stop to end early (creator only)_"
         )
 

@@ -8,6 +8,8 @@ from .verification import get_verifier
 
 logger = logging.getLogger(__name__)
 
+GITHUB_URL = "https://github.com/sangaline/tee-totalled/"
+
 # Try to import dstack-sdk, fall back gracefully if not available.
 try:
     from dstack_sdk import DstackClient
@@ -63,7 +65,7 @@ class AttestationClient:
                 "instance_id": result.instance_id,
                 "tcb_info": result.tcb_info,
                 "tee_available": True,
-                "github_url": "https://github.com/sangaline/tee-totalled/",
+                "github_url": GITHUB_URL,
             }
         except Exception as e:
             logger.warning(f"Failed to get app info: {e}")
@@ -96,12 +98,30 @@ class AttestationClient:
             "version": "0.1.0",
             "environment": "development",
             "tee_available": False,
-            "github_url": "https://github.com/sangaline/tee-totalled/",
+            "github_url": GITHUB_URL,
         }
 
     def is_available(self) -> bool:
         """Check if attestation is available."""
         return self._client is not None and self.is_reachable()
+
+
+def get_trust_footer() -> str:
+    """Get a concise trust footer with verification links for inline use in messages."""
+    client = get_attestation_client()
+    links = [f"[Source]({GITHUB_URL})"]
+
+    if client.is_available():
+        try:
+            info = client.get_info()
+            app_id = info.get("app_id", "unknown")
+            links.insert(0, f"[Verify TEE](https://trust.phala.com/app/{app_id})")
+        except Exception:
+            pass
+
+    return (
+        f"_Protected by TEE hardware. {' | '.join(links)} | /verify_"
+    )
 
 
 def get_attestation_message() -> str:
@@ -145,7 +165,7 @@ def get_attestation_message() -> str:
         f"*LLM (RedPill Confidential AI):*\n{llm_section}\n\n"
         f"*Bot Infrastructure:*\n{bot_section}\n\n"
         "Use /verify to perform a fresh attestation check with your own nonce.\n\n"
-        f"Source: https://github.com/sangaline/tee-totalled/"
+        f"Source: {GITHUB_URL}"
     )
 
 
