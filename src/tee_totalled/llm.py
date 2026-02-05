@@ -34,8 +34,8 @@ class LLMClient:
     async def _complete(self, system_prompt: str, user_prompt: str) -> str:
         """Make a completion request to the LLM with TEE verification."""
         if self._log_sensitive:
-            logger.debug(f"LLM request - System: {system_prompt[:100]}...")
-            logger.debug(f"LLM request - User: {user_prompt[:200]}...")
+            logger.debug(f"LLM request - System: {system_prompt}")
+            logger.debug(f"LLM request - User: {user_prompt}")
 
         # Build the request body for signature verification.
         request_body = {
@@ -54,7 +54,7 @@ class LLMClient:
         chat_id = response.id
 
         if self._log_sensitive:
-            logger.debug(f"LLM response (chat_id={chat_id}): {result[:200]}...")
+            logger.debug(f"LLM response (chat_id={chat_id}): {result}")
 
         # Verify the response signature to prove it came from the TEE.
         if self._verify_responses and chat_id:
@@ -92,13 +92,60 @@ class LLMClient:
 
     async def score_offensiveness(self, message: str) -> int:
         """Score how offensive a message is on a scale of 1-100."""
-        system_prompt = """You are an offensiveness scorer for a trust game. Your job is to rate
-how offensive a message is on a scale of 1-100, where:
-- 1-20: Mild or not offensive at all
-- 21-40: Somewhat inappropriate
-- 41-60: Moderately offensive
-- 61-80: Very offensive
-- 81-100: Extremely offensive
+        system_prompt = """You are an offensiveness scorer for a trust game. Rate how offensive a \
+message is on a scale of 1-100. This scale is HEAVILY compressed at the bottom and VERY spread \
+out at the top. Most content that people consider "offensive" should score 15-30. Scores above 50 \
+are extraordinarily rare. Use this rubric:
+
+1-5: Completely benign. Everyday statements, opinions, compliments, jokes, factual observations. \
+"I like pizza" = 2, "Mondays are terrible" = 4.
+
+6-10: Mildly impolite. Minor insults, sarcasm, light profanity used casually. "That's a dumb \
+idea" = 7, a single mild swear word = 9.
+
+11-15: Rude or crude. Harsher profanity, mean personal insults, crude humor, or dismissive \
+generalizations about groups. Would make a stranger uncomfortable. "You're an idiot" with strong \
+profanity = 13.
+
+16-20: Clearly offensive. Aggressive personal attacks, explicit crude sexual references, casual \
+use of a slur, or mocking a demographic group. Would be considered unacceptable in most social \
+settings. A single slur used as an insult = 18.
+
+21-30: Targeted hate speech against a specific group using dehumanizing language, graphic violent \
+or sexual descriptions, or content promoting discrimination. Would be reported on social media. \
+A hateful rant targeting one group = 25.
+
+31-40: Intensely hateful content with dehumanizing language AND violent intent toward a group, \
+graphic descriptions of violence against people, or deeply degrading content that combines two \
+offensive dimensions (e.g. racism + violence, or sexism + graphic sexual degradation).
+
+41-55: Combines multiple severe categories: e.g. extreme racial hatred with violent threats and \
+dehumanization, or targeted bigotry across two or more groups combined with graphic content. \
+Would shock even people accustomed to offensive content.
+
+56-70: Maximally hateful across three or more dimensions simultaneously. Must combine extreme \
+slurs, calls for violence, dehumanization, and graphic depravity targeting multiple groups. \
+Content at this level is rare even on the most unmoderated corners of the internet.
+
+71-85: Requires combining extreme hatred toward many groups at once (racial, gender, sexual \
+orientation, religious, disability) with graphic violent and sexual depravity, references to \
+harming the most vulnerable, and maximally dehumanizing framing. Each additional axis of \
+offensiveness pushes the score higher.
+
+86-95: Nearly the theoretical maximum. Must simultaneously deploy the most extreme forms of \
+every category: intersecting racial and ethnic hatred, misogyny, homophobia, anti-religious \
+bigotry, graphic references to harming children, extreme violent and sexual depravity, and \
+dehumanization, all woven together with creative cruelty and maximum shock value.
+
+96-100: The absolute ceiling. A score here means the message has achieved a level of \
+offensiveness that is difficult to even conceive of exceeding. Every possible dimension of \
+hatred, degradation, taboo violation, and depravity is present at its most extreme, combined \
+in a way that is maximally harmful and shocking. Virtually impossible to achieve.
+
+CRITICAL: You MUST use the low end of the scale. A message with one slur is around 18, not 60. \
+A hateful rant about one group is 25, not 75. Most "offensive" content people write scores \
+15-30. Resist the urge to inflate. Only content combining MANY extreme dimensions at once \
+reaches above 50.
 
 Respond with ONLY a JSON object in this exact format: {"score": <number>}
 Do not include any other text or explanation."""

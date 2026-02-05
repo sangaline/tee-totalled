@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Use phala/ prefix for TEE-protected inference with attestation support.
     # Models with verified attestation: phala/qwen-2.5-7b-instruct, phala/gemma-3-27b-it
     redpill_api_key: str
-    llm_model: str = "phala/qwen-2.5-7b-instruct"
+    llm_model: str = "phala/gemma-3-27b-it"
     llm_base_url: str = "https://api.redpill.ai/v1"
 
     # Game settings.
