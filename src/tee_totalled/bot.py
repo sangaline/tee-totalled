@@ -1,6 +1,8 @@
 """Telegram bot handlers."""
 
 import asyncio
+import io
+import json
 import logging
 
 from telegram import Update
@@ -249,17 +251,43 @@ class TeeTotalledBot:
         # How to verify independently.
         lines.append("*Independent Verification:*")
         lines.append(
-            "You can verify the LLM attestation yourself by calling "
-            "the RedPill API with your own nonce:"
+            "The raw TDX quote is attached as a file. You can verify it by "
+            "submitting it to Phala's verification service or any TDX verifier. "
+            "Your nonce is embedded in the quote to prove freshness."
+        )
+        lines.append("")
+        lines.append(
+            "Fetch the attestation report yourself:"
         )
         lines.append(f"`GET {verifier.base_url}/attestation/report"
-                     f"?model={verifier.model}&nonce=YOUR_NONCE`")
+                     f"?model={verifier.model}&nonce={result.nonce}`")
+        lines.append("")
+        lines.append(
+            "Verify a TDX quote via Phala:"
+        )
+        lines.append(f"`POST https://cloud-api.phala.network/api/v1/attestations/verify`")
         lines.append("")
         lines.append(f"Source: {GITHUB_URL}")
 
         await update.message.reply_text(
             "\n".join(lines), parse_mode=ParseMode.MARKDOWN,
         )
+
+        # Send the raw attestation data as a JSON file for independent verification.
+        if result.intel_quote or result.nvidia_payload:
+            attestation_data = {
+                "nonce": result.nonce,
+                "signing_address": result.signing_address,
+                "intel_quote": result.intel_quote,
+                "nvidia_payload": result.nvidia_payload,
+            }
+            raw_json = json.dumps(attestation_data, indent=2)
+            file_buf = io.BytesIO(raw_json.encode())
+            file_buf.name = "attestation_report.json"
+            await update.message.reply_document(
+                document=file_buf,
+                caption="Raw attestation data for independent verification.",
+            )
 
     async def handle_private_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

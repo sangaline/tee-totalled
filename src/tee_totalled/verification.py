@@ -44,6 +44,8 @@ class AttestationResult:
     gpu_verified: bool = False
     nonce: str | None = None
     error: str | None = None
+    intel_quote: str | None = None
+    nvidia_payload: str | None = None
 
 
 @dataclass
@@ -121,6 +123,8 @@ class RedPillVerifier:
                     intel_verified=intel_verified,
                     gpu_verified=gpu_verified,
                     nonce=nonce,
+                    intel_quote=intel_quote,
+                    nvidia_payload=nvidia_payload,
                 )
 
         except httpx.HTTPStatusError as e:
